@@ -1,0 +1,24 @@
+--- linux-6.18.origin/linux-6.18/net/bluetooth/hci_event.c	2025-12-01 06:42:10.000000000 +0800
++++ linux-6.18/net/bluetooth/hci_event.c	2026-06-16 21:17:50.220782286 +0800
+@@ -252,6 +252,21 @@
+ 
+ 	bt_dev_dbg(hdev, "status 0x%2.2x", rp->status);
+ 
++	/* 新增：兼容不支持该命令或返回无效参数的旧硬件 */
++	if (rp->status) {
++		switch (rp->status) {
++			case 0x01:  /* Unknown HCI Command */
++			case 0x12:  /* Invalid Parameters */
++				/* 仅打印警告，但让上层认为命令执行成功 */
++				bt_dev_warn(hdev, "Write Default Link Policy failed (0x%02x), ignoring",
++					    rp->status);
++				return 0x00;  /* 返回成功，让初始化继续 */
++			default:
++				/* 其他错误如实返回 */
++				return rp->status;
++		}
++	}
++
+ 	if (rp->status)
+ 		return rp->status;
+ 
